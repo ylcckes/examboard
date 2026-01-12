@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧考場管理看板 - By 阿剛老師</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        hand: ['"Zen Maru Gothic"', 'sans-serif'],
+                        tech: ['"Orbitron"', 'sans-serif'],
+                    },
+                    colors: {
+                        paper: 'var(--bg-paper)',
+                        ink: 'var(--text-ink)',
+                        pencil: 'var(--border-pencil)',
+                        highlight: 'var(--color-highlight)',
+                        danger: 'var(--color-danger)',
+                        success: 'var(--color-success)',
+                        card: 'var(--bg-card)',
+                        modal: 'var(--bg-modal)',
+                    },
+                    animation: {
+                        'marquee': 'marquee 25s linear infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'spin-slow': 'spin 3s linear infinite',
+                    },
+                    keyframes: {
+                        marquee: {
+                            '0%': { transform: 'translateX(100vw)' },
+                            '100%': { transform: 'translateX(-100%)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 注音字體定義 */
+        @font-face {
+            font-family: 'ㄅ注音芫荽 Regular';
+            src: url('https://kentxchang-goedutw.github.io/web/BpmfIansui-Regular_0.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* 注音模式強制套用 */
+        .font-zhuyin, .font-zhuyin * {
+            font-family: 'ㄅ注音芫荽 Regular', "Zen Maru Gothic", sans-serif !important;
+        }
+
+        /* CSS Variables for Theming */
+        :root {
+            /* 預設: 溫馨手繪 (Light) */
+            --bg-paper: #fdfbf7;
+            --text-ink: #292524;
+            --border-pencil: #57534e;
+            --color-highlight: #f59e0b;
+            --color-danger: #ef4444;
+            --color-success: #10b981;
+            --bg-card: #ffffff;
+            --bg-modal: #fdfbf7;
+            --font-display: "Zen Maru Gothic", sans-serif;
+        }
+
+        [data-theme='dark'] {
+            /* 黑板粉筆 (Dark) */
+            --bg-paper: #262626;
+            --text-ink: #e5e5e5;
+            --border-pencil: #a1a1aa;
+            --color-highlight: #facc15;
+            --color-danger: #f87171;
+            --color-success: #34d399;
+            --bg-card: #404040;
+            --bg-modal: #262626;
+            --font-display: "Zen Maru Gothic", sans-serif;
+        }
+
+        [data-theme='tech'] {
+            /* 現代科技 (Tech) - Cyberpunk */
+            --bg-paper: #0f172a; /* Slate 900 */
+            --text-ink: #38bdf8; /* Sky 400 */
+            --border-pencil: #0ea5e9; /* Sky 500 */
+            --color-highlight: #f472b6; /* Pink 400 */
+            --color-danger: #ef4444;
+            --color-success: #22d3ee; /* Cyan 400 */
+            --bg-card: #1e293b; /* Slate 800 */
+            --bg-modal: #0f172a;
+            --font-display: "Orbitron", sans-serif; /* Tech Font */
+        }
+
+        [data-theme='cute'] {
+            /* 活潑可愛 (Cute) - Pop/Pastel */
+            --bg-paper: #fff5f7; /* Lavender Blush */
+            --text-ink: #881337; /* Rose 900 */
+            --border-pencil: #fb7185; /* Rose 400 */
+            --color-highlight: #3b82f6; /* Blue 500 */
+            --color-danger: #e11d48; /* Rose 600 */
+            --color-success: #10b981;
+            --bg-card: #ffffff;
+            --bg-modal: #fff5f7;
+            --font-display: "Zen Maru Gothic", sans-serif;
+        }
+
+        body { 
+            background-color: var(--bg-paper); 
+            color: var(--text-ink); 
+            overflow: hidden; 
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        /* 通用手繪邊框樣式 */
+        .hand-drawn-border {
+            border: 3px solid var(--border-pencil);
+            border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.1);
+            transition: border-color 0.5s;
+        }
+
+        [data-theme='tech'] .hand-drawn-border {
+            border-radius: 4px;
+            border-width: 2px;
+            box-shadow: 0 0 10px var(--border-pencil), inset 0 0 5px var(--border-pencil);
+        }
+        
+        [data-theme='tech'] .font-hand {
+            font-family: 'Orbitron', sans-serif !important;
+            letter-spacing: 2px;
+        }
+
+        [data-theme='cute'] .hand-drawn-border {
+            border-radius: 30px;
+            border-width: 4px;
+            box-shadow: 4px 4px 0px var(--border-pencil);
+        }
+
+        .chalk-text {
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.1);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-pencil); border-radius: 4px; opacity: 0.5; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- 全域設定 ---
+        const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbyqOR5f78XoGn2NskpaKOwrXpJJ6P6pvZfgbWI8VFqIb1C7q1gAX3FMMU0VtcNMGDps/exec"; 
+
+        // --- 完整後端程式碼 (用於顯示與複製) ---
+        const FULL_GAS_CODE = `/**
+ * 考場管理系統 - Google Apps Script Backend API
+ * Made by 阿剛老師
+ * 版本: v1.0
+ */
+
+// 定義試算表名稱與欄位結構 (繁體中文)
+const DB_SCHEMA = {
+  SCHEDULE: {
+    name: "考程設定",
+    headers: ["日期", "節次", "科目", "開始時間", "結束時間", "備註"],
+    defaultData: [
+      ["2024-01-01", "第一節", "國語文", "08:20", "09:40", ""],
+      ["2024-01-01", "第二節", "英語文", "10:20", "11:30", "含英聽"],
+      ["2024-01-01", "第三節", "數學",   "13:20", "14:50", ""]
+    ]
+  },
+  MESSAGES: {
+    name: "考場語錄",
+    headers: ["顯示內容", "啟用狀態"],
+    defaultData: [
+      ["保持冷靜，細心檢查", "TRUE"],
+      ["手機請關機並放入書包", "TRUE"],
+      ["考試結束鐘響前，不得提早交卷", "TRUE"],
+      ["深呼吸，你能做到的！", "TRUE"]
+    ]
+  }
+};
+
+function doGet(e) {
+  const params = e.parameter;
+  const action = params.action || 'getData';
+  let result = {};
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    checkAndInitSheets(ss);
+    if (action === 'getData') {
+      result = {
+        status: 'success',
+        serverTime: new Date().getTime(),
+        schedule: getSheetData(ss, DB_SCHEMA.SCHEDULE.name),
+        messages: getSheetData(ss, DB_SCHEMA.MESSAGES.name)
+      };
+    } else {
+      throw new Error("未知的操作指令");
+    }
+  } catch (error) {
+    result = { status: 'error', message: error.toString() };
+  }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  let result = {};
+  try {
+    const postData = JSON.parse(e.postData.contents);
+    const action = postData.action;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    checkAndInitSheets(ss);
+    if (action === 'updateSchedule') {
+      updateSheetData(ss, DB_SCHEMA.SCHEDULE.name, postData.data);
+      result = { status: 'success', message: '考程表已更新' };
+    } else if (action === 'updateMessages') {
+      updateSheetData(ss, DB_SCHEMA.MESSAGES.name, postData.data);
+      result = { status: 'success', message: '考場語錄已更新' };
+    } else {
+      throw new Error("未知的操作指令");
+    }
+  } catch (error) {
+    result = { status: 'error', message: error.toString() };
+  }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function checkAndInitSheets(ss) {
+  Object.values(DB_SCHEMA).forEach(schema => {
+    let sheet = ss.getSheetByName(schema.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(schema.name);
+      sheet.appendRow(schema.headers);
+      if (schema.defaultData && schema.defaultData.length > 0) {
+        schema.defaultData.forEach(row => sheet.appendRow(row));
+      }
+      sheet.getRange(1, 1, 1, schema.headers.length).setFontWeight("bold").setBackground("#f3f4f6");
+      sheet.setFrozenRows(1);
+    }
+  });
+}
+
+function getSheetData(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  const data = rows.slice(1);
+  return data.map(row => {
+    let obj = {};
+    headers.forEach((header, index) => {
+      let val = row[index];
+      if (val instanceof Date) {
+        if (header.includes("時間")) {
+           let h = val.getHours().toString().padStart(2, '0');
+           let m = val.getMinutes().toString().padStart(2, '0');
+           val = \`\${h}:\${m}\`;
+        } else if (header.includes("日期")) {
+           let y = val.getFullYear();
+           let m = (val.getMonth() + 1).toString().padStart(2, '0');
+           let d = val.getDate().toString().padStart(2, '0');
+           val = \`\${y}-\${m}-\${d}\`;
+        } else {
+           val = val.toString();
+        }
+      }
+      obj[header] = val;
+    });
+    return obj;
+  });
+}
+
+function updateSheetData(ss, sheetName, newData) {
+  const sheet = ss.getSheetByName(sheetName);
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+  }
+  if (newData && newData.length > 0) {
+    const headers = DB_SCHEMA[Object.keys(DB_SCHEMA).find(key => DB_SCHEMA[key].name === sheetName)].headers;
+    const rows = newData.map(item => headers.map(h => item[h] || ""));
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+}`;
+
+        // --- React Icon Component ---
+        const Icon = ({ name, className }) => {
+            const icons = {
+                'x': <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+                'loader-2': <path d="M21 12a9 9 0 1 1-6.219-8.56"/>,
+                'timer': <><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></>,
+                'edit-2': <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>,
+                'trash-2': <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>,
+                'plus-circle': <><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></>,
+                'save': <><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8V3"/></>,
+                'palette': <><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></>
+            };
+            const content = icons[name];
+            return content ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {content}
+                </svg>
+            ) : null;
+        };
+
+        // --- 輔助函式 ---
+        const generateQRCodeUrl = (data) => `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=300&margin=2`;
+        const formatTime = (date) => (date instanceof Date && !isNaN(date)) ? date.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : "00:00";
+        const toDateInputValue = (date) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+
+        const safeCheckIsPast = (currentTime, item) => {
+            try {
+                if (!item?.['日期'] || !item?.['結束時間']) return false;
+                const [y, m, d] = String(item['日期']).replace(/\//g, '-').split('-').map(Number);
+                const [eh, em] = String(item['結束時間']).split(':').map(Number);
+                if (isNaN(y) || isNaN(m) || isNaN(d) || isNaN(eh) || isNaN(em)) return false;
+                return currentTime > new Date(y, m - 1, d, eh, em, 0);
+            } catch (e) {
+                console.warn("Date parsing error", e);
+                return false;
+            }
+        };
+
+        const useClock = () => {
+            const [time, setTime] = useState(new Date());
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+            return time;
+        };
+
+        // --- Modal ---
+        const Modal = ({ isOpen, title, children, onClose, type = 'info', maxWidth = 'max-w-2xl' }) => {
+            if (!isOpen) return null;
+            const borderClass = type === 'danger' ? 'border-danger' : 'border-pencil';
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+                    <div className={`bg-modal w-full ${maxWidth} p-6 relative hand-drawn-border ${borderClass} shadow-2xl animate-fade-in flex flex-col max-h-[90vh]`}>
+                        <div className="flex justify-between items-center mb-4 border-b-2 border-dashed border-pencil pb-2 flex-shrink-0">
+                            <h2 className="text-2xl font-bold font-hand text-ink">{title}</h2>
+                            <button onClick={onClose} className="p-2 hover:opacity-50 rounded-full transition"><Icon name="x" /></button>
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar flex-1 pr-2 relative text-ink">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- App ---
+        const App = () => {
+            const currentTime = useClock();
+            const [config, setConfig] = useState(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const configParam = urlParams.get('config');
+                let initialUrl = DEFAULT_GAS_URL;
+                if (configParam) {
+                    try { initialUrl = atob(configParam); localStorage.setItem('exam_gas_url', initialUrl); } catch (e) { console.error("Config decode failed", e); }
+                } else {
+                    const storedUrl = localStorage.getItem('exam_gas_url');
+                    if (storedUrl) initialUrl = storedUrl;
+                }
+                const storedSpeed = localStorage.getItem('marquee_speed');
+                return { gasUrl: initialUrl, marqueeSpeed: storedSpeed ? parseInt(storedSpeed, 10) : 25 };
+            });
+
+            const [theme, setTheme] = useState(() => localStorage.getItem('exam_theme') || 'light');
+            const [useZhuyin, setUseZhuyin] = useState(() => localStorage.getItem('exam_zhuyin') === 'true');
+            const [attendance, setAttendance] = useState(() => {
+                const saved = localStorage.getItem('exam_attendance');
+                return saved ? JSON.parse(saved) : { expected: 0, actual: 0 };
+            });
+            
+            const [schedule, setSchedule] = useState([]);
+            const [rawMessages, setRawMessages] = useState([]);
+            const [selectedDate, setSelectedDate] = useState(toDateInputValue(new Date()));
+            
+            const [adminTab, setAdminTab] = useState('schedule');
+            const [tempSchedule, setTempSchedule] = useState([]);
+            const [tempMessages, setTempMessages] = useState([]);
+            const [isSaving, setIsSaving] = useState(false);
+            const [modals, setModals] = useState({ settings: false, help: false, admin: false, custom: null });
+
+            useEffect(() => {
+                localStorage.setItem('exam_theme', theme);
+                document.documentElement.setAttribute('data-theme', theme);
+                if (theme === 'dark' || theme === 'tech') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+            }, [theme]);
+
+            useEffect(() => { localStorage.setItem('exam_zhuyin', useZhuyin); }, [useZhuyin]);
+            useEffect(() => { localStorage.setItem('exam_attendance', JSON.stringify(attendance)); }, [attendance]);
+
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('config')) window.history.replaceState({}, document.title, window.location.pathname);
+            }, []);
+
+            useEffect(() => {
+                if (config.gasUrl) {
+                    fetchData();
+                } else {
+                    setModals(prev => ({ ...prev, settings: true }));
+                }
+            }, [config.gasUrl]);
+
+            useEffect(() => {
+                if (modals.admin) {
+                    setTempSchedule(JSON.parse(JSON.stringify(schedule)));
+                    setTempMessages(JSON.parse(JSON.stringify(rawMessages)));
+                }
+            }, [modals.admin, schedule, rawMessages]);
+
+            const fetchData = async () => {
+                try {
+                    const response = await axios.get(`${config.gasUrl}?action=getData`);
+                    const data = response.data;
+                    if (data.status === 'success') {
+                        setSchedule(data.schedule || []);
+                        setRawMessages(data.messages || []);
+                    } else {
+                        showCustomModal('錯誤', '資料讀取失敗: ' + data.message, 'danger');
+                    }
+                } catch (error) {
+                    showCustomModal('連線錯誤', '無法連接後端，請檢查 URL 是否正確或網路狀態。', 'danger');
+                }
+            };
+
+            const saveData = async () => {
+                if (!config.gasUrl) return;
+                setIsSaving(true);
+                try {
+                    let payload = {};
+                    if (adminTab === 'schedule') payload = { action: 'updateSchedule', data: tempSchedule };
+                    else if (adminTab === 'messages') payload = { action: 'updateMessages', data: tempMessages };
+
+                    const response = await axios.post(config.gasUrl, JSON.stringify(payload), { headers: { 'Content-Type': 'text/plain' } });
+
+                    if (response.data.status === 'success') {
+                        await fetchData();
+                        setModals(p => ({...p, admin: false}));
+                    } else {
+                        throw new Error(response.data.message);
+                    }
+                } catch (error) {
+                    showCustomModal('儲存失敗', error.toString(), 'danger');
+                } finally {
+                    setIsSaving(false);
+                }
+            };
+
+            const toggleZhuyin = () => setUseZhuyin(prev => !prev);
+            const toggleTheme = () => {
+                const themes = ['light', 'dark', 'tech', 'cute'];
+                const currentIndex = themes.indexOf(theme);
+                setTheme(themes[(currentIndex + 1) % themes.length]);
+            };
+            const getThemeName = () => ({ 'light': '溫馨手繪', 'dark': '黑板粉筆', 'tech': '現代科技', 'cute': '活潑可愛' }[theme] || '未知');
+
+            const handleScheduleChange = (idx, field, val) => {
+                const newSchedule = [...tempSchedule];
+                newSchedule[idx][field] = val;
+                setTempSchedule(newSchedule);
+            };
+            const addScheduleItem = () => setTempSchedule([...tempSchedule, { '日期': new Date().toISOString().split('T')[0], '節次': '', '科目': '', '開始時間': '00:00', '結束時間': '00:00', '備註': '' }]);
+            const removeScheduleItem = (idx) => { if(confirm("確定要刪除此考程嗎？")) setTempSchedule(tempSchedule.filter((_, i) => i !== idx)); };
+            const handleMessageChange = (idx, field, val) => {
+                const newMessages = [...tempMessages];
+                newMessages[idx][field] = val;
+                setTempMessages(newMessages);
+            };
+            const addMessageItem = () => setTempMessages([...tempMessages, { '顯示內容': '', '啟用狀態': 'TRUE' }]);
+            const removeMessageItem = (idx) => { if(confirm("確定要刪除此語錄嗎？")) setTempMessages(tempMessages.filter((_, i) => i !== idx)); };
+
+            const showCustomModal = (title, message, type='info', onConfirm = null) => {
+                setModals(prev => ({ ...prev, custom: { title, message, type, onConfirm } }));
+            };
+
+            const handleCopy = (text, successTitle = "已複製", successMsg = "內容已複製到剪貼簿") => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    if (successful) showCustomModal(successTitle, successMsg, "success");
+                    else throw new Error("Copy command failed");
+                } catch (err) {
+                    showCustomModal("複製失敗", "瀏覽器權限受限，請手動選取內容並複製。", "danger");
+                }
+            };
+
+            const currentStatus = useMemo(() => {
+                try {
+                    if (!schedule.length) return { status: 'idle', subject: '暫無考試', progress: 0, text: '本日無安排' };
+                    const now = currentTime;
+                    // 使用統一的 YYYY-MM-DD 格式
+                    const todayStr = toDateInputValue(now);
+                    
+                    // 嚴格比對日期：只抓取與「今天」完全相同的考程
+                    const todaySchedule = schedule.filter(s => {
+                       if (!s || !s['日期']) return false;
+                       const sDate = String(s['日期']).replace(/\//g, '-');
+                       return sDate === todayStr;
+                    });
+                    
+                    // 若今天沒有考程，直接回傳 idle，不使用任何 fallback
+                    if (todaySchedule.length === 0) {
+                        return { status: 'idle', subject: '今日無考試', progress: 0 };
+                    }
+
+                    const targetSchedule = todaySchedule;
+
+                    for (let i = 0; i < targetSchedule.length; i++) {
+                        const exam = targetSchedule[i];
+                        if (!exam?.['開始時間'] || !exam?.['結束時間']) continue;
+                        const [sh, sm] = String(exam['開始時間']).split(':').map(Number);
+                        const [eh, em] = String(exam['結束時間']).split(':').map(Number);
+                        if ([sh, sm, eh, em].some(isNaN)) continue;
+
+                        const start = new Date(now); start.setHours(sh, sm, 0);
+                        const end = new Date(now); end.setHours(eh, em, 0);
+
+                        if (now >= start && now <= end) {
+                            const total = (end - start);
+                            const elapsed = (now - start);
+                            const progress = total > 0 ? Math.min((elapsed / total) * 100, 100) : 0;
+                            const endMinutes = end.getHours() * 60 + end.getMinutes();
+                            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                            const remaining = Math.max(0, endMinutes - currentMinutes);
+                            
+                            return { status: 'examining', subject: exam['科目'], section: exam['節次'], progress, remaining, warning: remaining <= 10, endTime: exam['結束時間'], obj: exam };
+                        } else if (now < start) {
+                             let prevEnd = new Date(0);
+                             if (i > 0) {
+                                const prev = targetSchedule[i-1];
+                                const [ph, pm] = String(prev['結束時間']).split(':').map(Number);
+                                prevEnd = new Date(now); prevEnd.setHours(ph, pm, 0);
+                             }
+                             if (i === 0 || now > prevEnd) {
+                                 const waitMins = Math.floor((start - now) / 60000);
+                                 if (waitMins < 60) return { status: 'waiting', subject: exam['科目'], nextStart: exam['開始時間'], minsToStart: waitMins, obj: exam };
+                             }
+                        }
+                    }
+                    return { status: 'idle', subject: '目前無考試', progress: 0 };
+                } catch (e) {
+                    return { status: 'error', subject: '資料解析錯誤', progress: 0 };
+                }
+            }, [currentTime, schedule]);
+
+            const filteredSchedule = useMemo(() => {
+                if (!selectedDate) return [];
+                return schedule.filter(s => String(s['日期']).replace(/\//g, '-') === selectedDate);
+            }, [schedule, selectedDate]);
+
+            const shareUrl = useMemo(() => {
+                if (!config.gasUrl) return '';
+                const url = new URL(window.location.href);
+                url.searchParams.set('config', btoa(config.gasUrl));
+                return url.toString();
+            }, [config.gasUrl]);
+
+            const marqueeText = useMemo(() => {
+                const activeMsgs = rawMessages.filter(m => m['啟用狀態'] === true || m['啟用狀態'] === 'TRUE').map(m => m['顯示內容']);
+                if (activeMsgs.length === 0) return "歡迎使用考場管理系統，請至後台設定語錄。";
+                return (activeMsgs.join("　★　") + "　★　").repeat(5);
+            }, [rawMessages]);
+
+            const containerClass = `bg-paper text-ink transition-colors duration-500 font-sans ${useZhuyin ? 'font-zhuyin' : ''}`;
+            const cardClass = "bg-card border-pencil";
+            const inputClass = "w-full p-2 border border-pencil rounded focus:border-highlight outline-none text-sm bg-transparent text-ink";
+
+            return (
+                <div className={`w-screen h-screen flex flex-col p-4 ${containerClass}`}>
+                    <header className="flex justify-between items-center mb-4 px-4">
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-3xl font-bold font-hand tracking-widest">🏫 考場資訊看板</h1>
+                            <span className="text-xl opacity-70 font-sans">{currentTime.toLocaleDateString('zh-TW', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={toggleZhuyin} className={`flex items-center gap-2 px-4 py-2 rounded-full hover:bg-black/10 transition border-2 ${useZhuyin ? 'border-highlight text-highlight' : 'border-transparent hover:border-pencil'}`} title="切換注音字體"><span className="font-bold">ㄅㄆㄇ</span></button>
+                            <button onClick={toggleTheme} className="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-black/10 transition border-2 border-transparent hover:border-pencil" title="切換主題"><Icon name="palette" className="w-5 h-5" /><span className="font-bold">{getThemeName()}</span></button>
+                            <button onClick={() => setModals(p => ({...p, admin: true}))} className="p-3 rounded-full hover:bg-black/10 transition" title="考程管理">📝</button>
+                            <button onClick={() => setModals(p => ({...p, settings: true}))} className="p-3 rounded-full hover:bg-black/10 transition" title="設定">⚙️</button>
+                            <button onClick={() => setModals(p => ({...p, help: true}))} className="p-3 rounded-full hover:bg-black/10 transition" title="說明">ℹ️</button>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
+                        <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
+                            <div className={`flex-1 flex flex-col items-center justify-center hand-drawn-border ${cardClass} relative overflow-hidden`}>
+                                <div className="text-[12vw] leading-none font-bold tabular-nums tracking-tighter text-center font-tech">{formatTime(currentTime)}</div>
+                                <div className="text-4xl mt-4 font-hand opacity-60">現在時間</div>
+                                {currentStatus.status === 'examining' && (<div className="absolute top-4 right-4 bg-danger text-white px-6 py-2 rounded-full font-bold text-2xl animate-pulse shadow-lg">剩下 {currentStatus.remaining} 分鐘</div>)}
+                            </div>
+                            <div className={`h-auto min-h-[12rem] p-6 hand-drawn-border ${cardClass} flex flex-col justify-center`}>
+                                {currentStatus.status === 'examining' ? (
+                                    <>
+                                        <div className="flex justify-between items-end mb-4">
+                                            <div><span className="text-2xl font-bold bg-highlight text-white px-3 py-1 rounded mr-3 shadow-sm">進行中</span><span className="text-5xl font-bold">{currentStatus.subject}</span></div>
+                                            <div className="text-3xl font-bold opacity-50 font-tech">{currentStatus.endTime} 結束</div>
+                                        </div>
+                                        <div className="w-full relative">
+                                            <div className="flex justify-between text-lg font-bold mb-1 px-1">
+                                                <span className="opacity-70">時間進度</span>
+                                                <span className={`tabular-nums ${currentStatus.warning ? 'text-danger animate-pulse' : 'text-highlight'}`}><Icon name="timer" className="inline w-5 h-5 mb-1 mr-1" />倒數 {currentStatus.remaining} 分鐘</span>
+                                            </div>
+                                            <div className="w-full h-12 bg-gray-200 rounded-xl overflow-hidden border-4 border-pencil shadow-inner relative">
+                                                <div className={`h-full transition-all duration-1000 ease-linear flex items-center justify-end pr-3 ${currentStatus.warning ? 'bg-danger animate-pulse' : 'bg-highlight'}`} style={{ width: `${currentStatus.progress}%` }}>
+                                                    {currentStatus.progress > 5 && (<span className="text-white font-bold text-lg drop-shadow-md">{Math.floor(currentStatus.progress)}%</span>)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {currentStatus.warning && (<div className="mt-2 text-center text-danger font-bold text-xl animate-bounce">⚠️ 請檢查每一題是否都有作答</div>)}
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-center py-4">
+                                        <h2 className="text-4xl font-bold opacity-40 mb-2">{currentStatus.status === 'waiting' ? `下節預告：${currentStatus.subject}` : '目前無考試'}</h2>
+                                        {currentStatus.status === 'waiting' && (<p className="text-2xl text-highlight">{currentStatus.nextStart} 開始 (還有 {currentStatus.minsToStart} 分鐘)</p>)}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="col-span-12 lg:col-span-5 flex flex-col gap-6 h-full overflow-hidden">
+                            <div className={`flex-1 hand-drawn-border ${cardClass} p-6 overflow-hidden flex flex-col min-h-0`}>
+                                <div className="flex justify-between items-center mb-6 border-b-2 border-dashed border-pencil pb-2 flex-shrink-0">
+                                    <h2 className="text-3xl font-bold text-center font-hand">📅 考程表</h2>
+                                    <input type="date" className={`p-1 border border-pencil rounded text-lg bg-transparent text-ink focus:border-highlight outline-none`} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                                </div>
+                                <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+                                    {filteredSchedule.length === 0 ? (<div className="text-center opacity-50 text-xl mt-10">{schedule.length === 0 ? "讀取中或無考程資料..." : "此日期無考試安排"}</div>) : (
+                                        filteredSchedule.map((item, idx) => {
+                                            const isCurrent = currentStatus.obj === item;
+                                            const isPast = safeCheckIsPast(currentTime, item);
+                                            return (
+                                                <div key={idx} className={`flex justify-between items-center p-4 rounded-xl border-2 transition-all ${isCurrent ? 'bg-highlight/20 border-highlight scale-105 shadow-lg' : isPast ? 'bg-black/5 border-pencil opacity-60' : 'bg-transparent border-dashed border-pencil'}`}>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${isCurrent ? 'bg-highlight text-white' : 'bg-gray-200 text-gray-500'}`}>{item['節次'] ? item['節次'].substring(0,2) : ''}</div>
+                                                        <div><div className="text-2xl font-bold">{item['科目']}</div><div className="text-sm opacity-70">{item['備註']}</div></div>
+                                                    </div>
+                                                    <div className="text-xl font-bold font-tech">{item['開始時間']} - {item['結束時間']}</div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={`p-4 hand-drawn-border ${cardClass} flex justify-around items-center shrink-0`}>
+                                <div className="text-center group"><div className="text-sm opacity-70 mb-1 font-bold">應到人數</div><div className="relative"><input type="number" min="0" className="w-24 text-4xl font-bold text-center bg-transparent border-b-2 border-dashed border-pencil text-ink focus:border-highlight focus:outline-none transition-colors p-1" value={attendance.expected} onChange={(e) => setAttendance({...attendance, expected: Math.max(0, parseInt(e.target.value) || 0)})} /><Icon name="edit-2" className="w-4 h-4 absolute top-0 right-0 opacity-0 group-hover:opacity-30 transition-opacity text-pencil" /></div></div>
+                                <div className="text-5xl opacity-20 font-hand">/</div>
+                                <div className="text-center group"><div className="text-sm opacity-70 mb-1 font-bold">實到人數</div><div className="relative"><input type="number" min="0" className="w-24 text-4xl font-bold text-center bg-transparent border-b-2 border-dashed border-pencil text-ink focus:border-highlight focus:outline-none transition-colors p-1" value={attendance.actual} onChange={(e) => setAttendance({...attendance, actual: Math.max(0, parseInt(e.target.value) || 0)})} /><Icon name="edit-2" className="w-4 h-4 absolute top-0 right-0 opacity-0 group-hover:opacity-30 transition-opacity text-pencil" /></div></div>
+                                <div className="h-12 w-px bg-pencil opacity-30 mx-4"></div>
+                                <div className="text-center"><div className="text-sm opacity-70 mb-1 font-bold">缺席</div><div className={`text-5xl font-bold ${attendance.expected - attendance.actual > 0 ? 'text-danger animate-pulse-slow' : 'text-success'}`}>{Math.max(0, attendance.expected - attendance.actual)}</div></div>
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer className="mt-6 h-16 bg-gradient-to-r from-stone-800 to-stone-700 rounded-full flex items-center overflow-hidden border-4 border-stone-600 shadow-xl relative text-white">
+                        <div className="absolute left-0 bg-stone-800 px-4 z-10 font-bold tracking-widest h-full flex items-center border-r border-stone-600">📢 公告</div>
+                        <div className="whitespace-nowrap animate-marquee text-3xl font-bold ml-4" style={{ animationDuration: `${config.marqueeSpeed}s` }}>{marqueeText}</div>
+                        <div className="absolute right-0 bg-stone-800 px-4 z-10 text-xs h-full flex items-center border-l border-stone-600 opacity-50">Made by 阿剛老師 | CC BY-NC-SA</div>
+                    </footer>
+
+                    <Modal isOpen={modals.settings} title="系統連線設定" onClose={() => setModals(p => ({...p, settings: false}))}>
+                        <div className="space-y-6">
+                            <p className="text-ink opacity-80">請輸入您部署的 Google Apps Script (Web App) 網址以連接資料庫。</p>
+                            <div><label className="block text-sm font-bold mb-2">GAS Web App URL</label><input type="password" className={inputClass} placeholder="https://script.google.com/macros/s/..../exec" value={config.gasUrl} onChange={(e) => setConfig(p => ({...p, gasUrl: e.target.value}))} /></div>
+                            <div>
+                                <label className="block text-sm font-bold mb-2">公告捲動速度 (秒)</label>
+                                <div className="flex items-center gap-4"><input type="range" min="10" max="180" className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" value={config.marqueeSpeed} onChange={(e) => setConfig(p => ({...p, marqueeSpeed: parseInt(e.target.value)}))} /><span className="font-mono font-bold w-12 text-right">{config.marqueeSpeed}s</span></div>
+                                <p className="text-xs text-ink opacity-60 mt-1">數字越小速度越快，預設為 25 秒。</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button onClick={() => { localStorage.setItem('exam_gas_url', config.gasUrl); localStorage.setItem('marquee_speed', config.marqueeSpeed); showCustomModal("儲存成功", "設定已儲存，將重新載入資料。", "success"); fetchData(); setModals(p => ({...p, settings: false})); }} className="flex-1 bg-highlight text-white py-3 rounded-lg font-bold hover:opacity-90 transition shadow-md">儲存並連線</button>
+                                <button onClick={() => { localStorage.removeItem('exam_gas_url'); localStorage.removeItem('marquee_speed'); setConfig({ gasUrl: '', marqueeSpeed: 25 }); showCustomModal("已清除", "所有本地設定已重置。", "warning"); }} className="px-6 border-2 border-pencil rounded-lg font-bold hover:bg-black/5 transition text-ink">重置</button>
+                            </div>
+                            {config.gasUrl && (
+                                <div className="bg-black/5 p-4 rounded-lg mt-4">
+                                    <h3 className="font-bold mb-2">📱 手機掃碼/分享連結</h3>
+                                    <div className="flex flex-col md:flex-row gap-4 items-center">
+                                        <div className="bg-white p-2 rounded shadow"><img src={generateQRCodeUrl(shareUrl)} alt="QR Code" className="w-32 h-32" /></div>
+                                        <div className="flex-1 w-full"><p className="text-xs break-all bg-white p-2 rounded border border-gray-200 mb-2 h-20 overflow-y-auto text-black">{shareUrl}</p><button onClick={() => handleCopy(shareUrl, "已複製", "分享連結已複製到剪貼簿")} className="w-full bg-pencil text-white py-2 rounded hover:opacity-90 text-sm shadow-md">複製連結 (含設定參數)</button></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Modal>
+
+                    <Modal isOpen={modals.admin} title="後台管理介面" onClose={() => setModals(p => ({...p, admin: false}))} maxWidth="max-w-4xl">
+                        {isSaving && (<div className="absolute inset-0 bg-modal/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm rounded-lg"><Icon name="loader-2" className="w-12 h-12 animate-spin text-highlight mb-2" /><span className="text-lg font-bold text-ink">資料儲存中...</span></div>)}
+                        <div className="flex flex-col h-full text-ink">
+                            <div className="flex gap-2 mb-4 border-b border-pencil pb-2">
+                                <button className={`px-4 py-2 rounded-t-lg font-bold ${adminTab === 'schedule' ? 'bg-highlight text-white' : 'bg-black/10 text-ink opacity-60'}`} onClick={() => setAdminTab('schedule')}>考程設定</button>
+                                <button className={`px-4 py-2 rounded-t-lg font-bold ${adminTab === 'messages' ? 'bg-highlight text-white' : 'bg-black/10 text-ink opacity-60'}`} onClick={() => setAdminTab('messages')}>語錄/公告設定</button>
+                            </div>
+                            {adminTab === 'schedule' && (
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-black/10 font-bold text-ink"><tr><th className="p-2 w-32">日期</th><th className="p-2 w-20">節次</th><th className="p-2 w-32">科目</th><th className="p-2 w-24">開始</th><th className="p-2 w-24">結束</th><th className="p-2">備註</th><th className="p-2 w-12"></th></tr></thead>
+                                            <tbody className="divide-y divide-pencil/20">
+                                                {tempSchedule.map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-black/5">
+                                                        <td className="p-1"><input type="date" className={inputClass} value={item['日期']} onChange={e => handleScheduleChange(idx, '日期', e.target.value)} /></td>
+                                                        <td className="p-1"><input type="text" className={inputClass} value={item['節次']} onChange={e => handleScheduleChange(idx, '節次', e.target.value)} /></td>
+                                                        <td className="p-1"><input type="text" className={inputClass} value={item['科目']} onChange={e => handleScheduleChange(idx, '科目', e.target.value)} /></td>
+                                                        <td className="p-1"><input type="time" className={inputClass} value={item['開始時間']} onChange={e => handleScheduleChange(idx, '開始時間', e.target.value)} /></td>
+                                                        <td className="p-1"><input type="time" className={inputClass} value={item['結束時間']} onChange={e => handleScheduleChange(idx, '結束時間', e.target.value)} /></td>
+                                                        <td className="p-1"><input type="text" className={inputClass} value={item['備註']} onChange={e => handleScheduleChange(idx, '備註', e.target.value)} /></td>
+                                                        <td className="p-1 text-center"><button onClick={() => removeScheduleItem(idx)} className="text-danger hover:bg-danger/10 p-1 rounded"><Icon name="trash-2" className="w-4 h-4" /></button></td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <button onClick={addScheduleItem} className="flex items-center gap-2 text-highlight hover:opacity-80 px-3 py-1 rounded border border-highlight"><Icon name="plus-circle" className="w-4 h-4" /> 新增一列</button>
+                                        <button onClick={() => saveData('schedule')} disabled={isSaving} className="bg-highlight text-white px-6 py-2 rounded font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2 shadow-md">{isSaving ? '儲存中...' : <><Icon name="save" className="w-4 h-4" /> 儲存變更</>}</button>
+                                    </div>
+                                </div>
+                            )}
+                            {adminTab === 'messages' && (
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <div className="space-y-2">
+                                        {tempMessages.map((msg, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 p-2 border border-pencil rounded hover:bg-black/5 bg-card">
+                                                <div className="flex-1"><input type="text" className={inputClass} value={msg['顯示內容']} onChange={e => handleMessageChange(idx, '顯示內容', e.target.value)} placeholder="請輸入鼓勵語或規則..." /></div>
+                                                <div className="flex items-center gap-2 px-2"><label className="flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={msg['啟用狀態'] === true || msg['啟用狀態'] === 'TRUE'} onChange={e => handleMessageChange(idx, '啟用狀態', e.target.checked ? 'TRUE' : 'FALSE')} /><div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-success relative"></div><span className="ml-2 text-sm text-ink opacity-80 w-12">{msg['啟用狀態'] === true || msg['啟用狀態'] === 'TRUE' ? '啟用' : '停用'}</span></label></div>
+                                                <button onClick={() => removeMessageItem(idx)} className="text-danger hover:bg-danger/10 p-2 rounded"><Icon name="trash-2" className="w-4 h-4" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <button onClick={addMessageItem} className="flex items-center gap-2 text-highlight hover:opacity-80 px-3 py-1 rounded border border-highlight"><Icon name="plus-circle" className="w-4 h-4" /> 新增語錄</button>
+                                        <button onClick={() => saveData('messages')} disabled={isSaving} className="bg-highlight text-white px-6 py-2 rounded font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2 shadow-md">{isSaving ? '儲存中...' : <><Icon name="save" className="w-4 h-4" /> 儲存變更</>}</button>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="mt-4 pt-4 border-t border-pencil text-center text-xs text-ink opacity-50">提示：資料儲存後，會自動更新至 Google 試算表。若多人同時編輯，後儲存者會覆蓋前者。</div>
+                        </div>
+                    </Modal>
+
+                    {modals.custom && (
+                        <Modal isOpen={true} title={modals.custom.title} type={modals.custom.type} onClose={() => setModals(p => ({...p, custom: null}))}>
+                            <div className="text-center py-4">
+                                <p className="text-lg mb-6 text-ink">{modals.custom.message}</p>
+                                <button onClick={() => { const callback = modals.custom.onConfirm; setModals(p => ({...p, custom: null})); if (callback) callback(); }} className="bg-pencil text-white px-8 py-2 rounded hover:opacity-90 shadow-md">確定</button>
+                            </div>
+                        </Modal>
+                    )}
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
